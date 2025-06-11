@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siqens Fuel Cell Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            padding: 25px;
+            text-align: center;
+            border-bottom: 3px solid #10b981;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 25px;
+            padding: 25px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .simulation-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .control-panel {
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #334155;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .fuel-cell-diagram {
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 30px;
+            border: 2px solid #334155;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            height: 400px;
+            position: relative;
+        }
+        
+        .diagram-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #10b981;
+        }
+        
+        .fuel-cell-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            position: relative;
+        }
+        
+        .electrode {
+            width: 120px;
+            height: 250px;
+            border-radius: 15px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #64748b;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .anode {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .cathode {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .electrode-label {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .electrode-material {
+            font-size: 0.9em;
+            opacity: 0.9;
+            text-align: center;
+        }
+        
+        .membrane {
+            width: 20px;
+            height: 200px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+        }
+        
+        .membrane-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #fbbf24;
+        }
+        
+        .reaction-equation {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        
+        .equation-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #10b981;
+        }
+        
+        .equation {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+        
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #10b981;
+            border-bottom: 2px solid #10b981;
+            padding-bottom: 5px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #cbd5e1;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #475569;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #ffffff;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .results-panel {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #334155;
+            margin-bottom: 20px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .result-label {
+            font-size: 0.9em;
+            color: #94a3b8;
+        }
+        
+        .result-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .devices-section {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #334155;
+        }
+        
+        .device-item {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border: 1px solid #475569;
+        }
+        
+        .device-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #e2e8f0;
+        }
+        
+        .device-specs {
+            font-size: 0.9em;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        
+        .device-energy {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: #10b981;
+        }
+        
+        .feasibility-panel {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #334155;
+            margin-top: 20px;
+        }
+        
+        .feasibility-good {
+            border-left: 4px solid #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .feasibility-warning {
+            border-left: 4px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .feasibility-critical {
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            z-index: 10;
+        }
+        
+        .electron {
+            background: radial-gradient(circle, #fbbf24, #f59e0b);
+            box-shadow: 0 0 8px #fbbf24;
+        }
+        
+        .proton {
+            background: radial-gradient(circle, #ef4444, #dc2626);
+            box-shadow: 0 0 8px #ef4444;
+        }
+        
+        @keyframes electron-flow {
+            0% { left: 20%; top: 50%; opacity: 1; }
+            50% { left: 50%; top: 30%; }
+            100% { left: 80%; top: 50%; opacity: 0.3; }
+        }
+        
+        @keyframes proton-flow {
+            0% { left: 25%; top: 55%; opacity: 1; }
+            100% { left: 75%; top: 55%; opacity: 0.3; }
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding: 0 20px;
+        }
+        
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #475569;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #10b981;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .step-number {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .step-title {
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Siqens Fuel Cell Simulation</h1>
+        <div class="subtitle">Evaluate Methanol Fuel Cells as Primary Power Generators</div>
+    </div>
+    
+    <div class="step-indicator">
+        <div class="step active" id="step1">
+            <div class="step-number">1</div>
+            <div class="step-title">Electrode Materials</div>
+        </div>
+        <div class="step" id="step2">
+            <div class="step-number">2</div>
+            <div class="step-title">Calculate Performance</div>
+        </div>
+        <div class="step" id="step3">
+            <div class="step-number">3</div>
+            <div class="step-title">Energy Analysis</div>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="simulation-panel">
+            <div class="reaction-equation">
+                <div class="equation-title">Methanol Fuel Cell Reactions</div>
+                <div class="equation"><strong>Anode (Oxidation):</strong> CH₃OH + H₂O → CO₂ + 6H⁺ + 6e⁻  &nbsp;&nbsp; E° = -0.03 V</div>
+                <div class="equation"><strong>Cathode (Reduction):</strong> 3/2 O₂ + 6H⁺ + 6e⁻ → 3H₂O  &nbsp;&nbsp; E° = +1.23 V</div>
+                <div class="equation"><strong>Overall Reaction:</strong> CH₃OH + 3/2 O₂ → CO₂ + 2H₂O</div>
+                <div class="equation"><strong>Standard Cell Potential:</strong> E°<sub>cell</sub> = 1.23 - (-0.03) = 1.26 V</div>
+            </div>
+            
+            <div class="fuel-cell-diagram">
+                <div class="diagram-title">Direct Methanol Fuel Cell (DMFC)</div>
+                <div class="fuel-cell-container">
+                    <div class="electrode anode">
+                        <div class="electrode-label">ANODE</div>
+                        <div class="electrode-material" id="anodeMaterial">Platinum (Pt)</div>
+                        <div style="margin-top: 10px; font-size: 0.8em;">CH₃OH → CO₂ + 6H⁺ + 6e⁻</div>
+                    </div>
+                    
+                    <div class="membrane">
+                        <div class="membrane-label">Proton Exchange Membrane</div>
+                    </div>
+                    
+                    <div class="electrode cathode">
+                        <div class="electrode-label">CATHODE</div>
+                        <div class="electrode-material" id="cathodeMaterial">Platinum (Pt)</div>
+                        <div style="margin-top: 10px; font-size: 0.8em;">O₂ + 6H⁺ + 6e⁻ → 3H₂O</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="devices-section">
+                <div class="section-title">Critical Devices Energy Analysis</div>
+                <div class="device-item">
+                    <div class="device-name">Emergency LED Light</div>
+                    <div class="device-specs">5W for 12 hours daily</div>
+                    <div class="device-energy" id="ledEnergy">Energy: 0.060 kWh/day</div>
+                </div>
+                <div class="device-item">
+                    <div class="device-name">Emergency Radio</div>
+                    <div class="device-specs">50W for 1 hour daily</div>
+                    <div class="device-energy" id="radioEnergy">Energy: 0.050 kWh/day</div>
+                </div>
+                <div class="device-item">
+                    <div class="device-name">Medical Refrigerator</div>
+                    <div class="device-specs">60W for 6 hours daily</div>
+                    <div class="device-energy" id="fridgeEnergy">Energy: 0.360 kWh/day</div>
+                </div>
+                <div class="device-item" style="border: 2px solid #10b981; font-weight: 600;">
+                    <div class="device-name">TOTAL ENERGY DEMAND</div>
+                    <div class="device-energy" id="totalEnergy">0.470 kWh/day</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="section-title">Step 1: Select Electrode Materials</div>
+            
+            <div class="input-group">
+                <label class="input-label">Anode Material:</label>
+                <select id="anodeSelect" onchange="updateElectrodes()">
+                    <option value="pt">Platinum (Pt) - E° = -0.03 V</option>
+                    <option value="ni">Nickel (Ni) - E° = -0.15 V</option>
+                    <option value="c">Carbon (C) - E° = -0.25 V</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Cathode Material:</label>
+                <select id="cathodeSelect" onchange="updateElectrodes()">
+                    <option value="pt">Platinum (Pt) - E° = +1.23 V</option>
+                    <option value="ni">Nickel (Ni) - E° = +0.95 V</option>
+                    <option value="c">Carbon (C) - E° = +0.75 V</option>
+                </select>
+            </div>
+            
+            <div class="section-title">Step 2: Operating Conditions</div>
+            
+            <div class="input-group">
+                <label class="input-label">Operating Current (A):</label>
+                <input type="number" id="currentInput" value="0.5" step="0.1" min="0.1" max="2.0" onchange="calculatePerformance()">
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Efficiency Factor (%):</label>
+                <input type="number" id="efficiencyInput" value="40" step="5" min="20" max="80" onchange="calculatePerformance()">
+            </div>
+            
+            <button class="calculate-btn" onclick="calculatePerformance()">Calculate Fuel Cell Performance</button>
+            
+            <div class="results-panel">
+                <div class="section-title">Performance Results</div>
+                <div class="result-item">
+                    <span class="result-label">Theoretical Voltage:</span>
+                    <span class="result-value" id="theoreticalVoltage">1.26 V</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Actual Voltage:</span>
+                    <span class="result-value" id="actualVoltage">0.50 V</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Power Output:</span>
+                    <span class="result-value" id="powerOutput">0.25 W</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Daily Energy:</span>
+                    <span class="result-value" id="dailyEnergy">0.006 kWh</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Cells Needed:</span>
+                    <span class="result-value" id="cellsNeeded">78 cells</span>
+                </div>
+            </div>
+            
+            <div class="feasibility-panel" id="feasibilityPanel">
+                <div class="section-title">Feasibility Assessment</div>
+                <div id="feasibilityText">
+                    Configure your fuel cell parameters above to see the feasibility analysis.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let particleInterval;
+        
+        const electrodeData = {
+            pt: { name: 'Platinum (Pt)', anodeE: -0.03, cathodeE: 1.23, efficiency: 1.0 },
+            ni: { name: 'Nickel (Ni)', anodeE: -0.15, cathodeE: 0.95, efficiency: 0.7 },
+            c: { name: 'Carbon (C)', anodeE: -0.25, cathodeE: 0.75, efficiency: 0.5 }
+        };
+        
+        function updateElectrodes() {
+            const anodeSelect = document.getElementById('anodeSelect').value;
+            const cathodeSelect = document.getElementById('cathodeSelect').value;
+            
+            document.getElementById('anodeMaterial').textContent = electrodeData[anodeSelect].name;
+            document.getElementById('cathodeMaterial').textContent = electrodeData[cathodeSelect].name;
+            
+            // Update step indicator
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step3').classList.remove('active');
+            
+            calculatePerformance();
+        }
+        
+        function calculatePerformance() {
+            const anodeSelect = document.getElementById('anodeSelect').value;
+            const cathodeSelect = document.getElementById('cathodeSelect').value;
+            const current = parseFloat(document.getElementById('currentInput').value);
+            const efficiency = parseFloat(document.getElementById('efficiencyInput').value) / 100;
+            
+            const anodeData = electrodeData[anodeSelect];
+            const cathodeData = electrodeData[cathodeSelect];
+            
+            // Calculate theoretical voltage
+            const theoreticalVoltage = cathodeData.cathodeE - anodeData.anodeE;
+            
+            // Calculate actual voltage (reduced by efficiency and electrode performance)
+            const materialEfficiency = Math.min(anodeData.efficiency, cathodeData.efficiency);
+            const actualVoltage = theoreticalVoltage * efficiency * materialEfficiency;
+            
+            // Calculate power and energy
+            const powerOutput = actualVoltage * current;
+            const dailyEnergy = (powerOutput * 24) / 1000; // kWh per day
+            
+            // Calculate cells needed
+            const totalDemand = 0.470; // kWh per day
+            const cellsNeeded = Math.ceil(totalDemand / dailyEnergy);
+            
+            // Update displays
+            document.getElementById('theoreticalVoltage').textContent = theoreticalVoltage.toFixed(2) + ' V';
+            document.getElementById('actualVoltage').textContent = actualVoltage.toFixed(2) + ' V';
+            document.getElementById('powerOutput').textContent = powerOutput.toFixed(2) + ' W';
+            document.getElementById('dailyEnergy').textContent = dailyEnergy.toFixed(3) + ' kWh';
+            document.getElementById('cellsNeeded').textContent = cellsNeeded + ' cells';
+            
+            // Update step indicators
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('step3').classList.add('active');
+            
+            // Update feasibility assessment
+            updateFeasibilityAssessment(cellsNeeded, actualVoltage, powerOutput);
+            
+            // Start particle animation
+            startParticleAnimation();
+        }
+        
+        function updateFeasibilityAssessment(cellsNeeded, voltage, power) {
+            const panel = document.getElementById('feasibilityPanel');
+            const text = document.getElementById('feasibilityText');
+            
+            let assessment = '';
+            let className = '';
+            
+            if (cellsNeeded <= 10) {
+                className = 'feasibility-good';
+                assessment = `
+                    <strong>HIGHLY FEASIBLE</strong><br>
+                    Only ${cellsNeeded} cells needed. This is practical for emergency deployment.<br>
+                    <strong>Advantages:</strong> Compact, manageable fuel requirements, easy maintenance.<br>
+                    <strong>Deployment:</strong> Suitable for disaster relief scenarios.
+                `;
+            } else if (cellsNeeded <= 50) {
+                className = 'feasibility-warning';
+                assessment = `
+                    <strong>MODERATELY FEASIBLE</strong><br>
+                    ${cellsNeeded} cells required. Challenging but possible for large operations.<br>
+                    <strong>Considerations:</strong> Higher cost, more complex system, increased fuel needs.<br>
+                    <strong>Deployment:</strong> Suitable for established relief centers.
+                `;
+            } else {
+                className = 'feasibility-critical';
+                assessment = `
+                    <strong>NOT PRACTICAL</strong><br>
+                    ${cellsNeeded} cells needed. Too many for practical deployment.<br>
+                    <strong>Issues:</strong> Excessive cost, complex logistics, massive fuel requirements.<br>
+                    <strong>Alternative:</strong> Consider different electrode materials or hybrid systems.
+                `;
+            }
+            
+            panel.className = `feasibility-panel ${className}`;
+            text.innerHTML = assessment;
+        }
+        
+        function startParticleAnimation() {
+            if (particleInterval) clearInterval(particleInterval);
+            
+            const container = document.querySelector('.fuel-cell-container');
+            
+            particleInterval = setInterval(() => {
+                // Electrons flowing from anode to cathode
+                const electron = document.createElement('div');
+                electron.className = 'particle electron';
+                electron.style.animation = 'electron-flow 3s linear';
+                container.appendChild(electron);
+                
+                // Protons flowing through membrane
+                const proton = document.createElement('div');
+                proton.className = 'particle proton';
+                proton.style.animation = 'proton-flow 2s linear';
+                container.appendChild(proton);
+                
+                setTimeout(() => {
+                    if (electron.parentNode) electron.parentNode.removeChild(electron);
+                    if (proton.parentNode) proton.parentNode.removeChild(proton);
+                }, 3000);
+            }, 500);
+        }
+        
+        // Initialize
+        updateElectrodes();
+        calculatePerformance();
+    </script>
+</body>
+</html>
